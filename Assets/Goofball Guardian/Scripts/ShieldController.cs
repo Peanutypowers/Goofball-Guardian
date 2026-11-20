@@ -33,11 +33,11 @@ public float cooldown = 0.3f;
         float shieldUpTimer;
     float cooldownTimer;
     bool wasHeld;
-    SpriteRenderer sr;
+    Renderer rend;
 
     void Start()
     {
-        sr = GetComponent<SpriteRenderer>();
+        rend = GetComponent<Renderer>();
     Calibrate();
     }
 
@@ -58,7 +58,9 @@ public float cooldown = 0.3f;
         float minDistance;
     if (useMouse || trackedProp == null)
         {
-            Vector3 mouse = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+            Vector3 m = Input.mousePosition;
+            m.z = creature.position.z - Camera.main.transform.position.z; // distance from camera to creature
+            Vector3 mouse = Camera.main.ScreenToWorldPoint(m);
             dir = mouse - creature.position;
              minDistance = 0.2f;
         }
@@ -98,9 +100,9 @@ public float cooldown = 0.3f;
         shieldUp = alwaysOn || shieldUpTimer > 0;
 
     // change color so the player can see when the shield is up
-        if (shieldUp) sr.color = Color.cyan;
-        else if (cooldownTimer > 0) sr.color = Color.gray;
-     else sr.color = new Color(0.4f, 0.5f, 1f, 0.5f);
+        if (shieldUp) rend.material.color = Color.cyan;
+        else if (cooldownTimer > 0) rend.material.color = Color.gray;
+     else rend.material.color = new Color(0.3f, 0.4f, 1f);
     }
     // The LED shows up in motive as one extra marker next to the shield
     bool CheckLed()

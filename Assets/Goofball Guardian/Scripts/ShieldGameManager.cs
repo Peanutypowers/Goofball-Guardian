@@ -1,4 +1,5 @@
 using UnityEngine;
+using TMPro;
 
 public class ShieldGameManager : MonoBehaviour
 {
@@ -10,6 +11,13 @@ public Transform creature;
       public GameObject titleScreen;
     public GameObject winScreen;
      public GameObject loseScreen;
+    public GameObject hud; // timer, score and hearts while playing
+
+    // UI texts
+    public TMP_Text timerText;
+    public TMP_Text scoreText;
+    public TMP_Text messageText; // GO! BLOCKED! OUCH!
+    public TMP_Text finalScoreText; // shows on win/lose
 
     public AudioSource audioSource;
     public AudioClip blockSound;
@@ -23,6 +31,9 @@ public Transform creature;
     [HideInInspector] public bool playing = false;
      bool gameOver = false;
     int lives;
+    int score;
+    int highScore;
+    float messageTimer;
      float timeLeft;
     float timePlayed;
      float spawnTimer;
@@ -31,15 +42,16 @@ public Transform creature;
     float creatureFlashTimer;
     float shakeTimer;
     Vector3 cameraStartPos;
-    SpriteRenderer creatureSprite;
+    Renderer creatureRend;
     Color creatureColor;
     void Start()
     {
         cameraStartPos = Camera.main.transform.position;
 
-        creatureSprite = creature.GetComponent<SpriteRenderer>();
-        creatureColor = creatureSprite.color;
+        creatureRend = creature.GetComponent<Renderer>();
+        creatureColor = creatureRend.material.color;
 
+        highScore = PlayerPrefs.GetInt("HighScore", 0);
         lives = startLives;
         UpdateHearts();
         ShowScreen(titleScreen);
@@ -54,6 +66,9 @@ public Transform creature;
             timeLeft -= Time.deltaTime;
 
             if (timeLeft <= 0) EndGame(true);
+
+            timerText.text = "Time: " + Mathf.CeilToInt(timeLeft);
+            scoreText.text = "Score: " + score;
 
             // spaw faster 
             float difficulty = Mathf.Clamp01(timePlayed / 60f);
@@ -80,9 +95,13 @@ public Transform creature;
             StartGame();
         }
 
+        // message pops up for a sec
+        messageTimer -= Time.deltaTime;
+        messageText.gameObject.SetActive(messageTimer > 0);
+
         // flashes red when hit
         creatureFlashTimer -= Time.deltaTime;
-        creatureSprite.color = creatureFlashTimer > 0 ? Color.red : creatureColor;
+        creatureRend.material.color = creatureFlashTimer > 0 ? Color.red : creatureColor;
         // screen shake hehe
         shakeTimer -= Time.deltaTime;
 
@@ -99,6 +118,7 @@ public Transform creature;
         playing = true;
         gameOver = false;
         lives = startLives;
+        score = 0;
         timeLeft = roundTime;
         timePlayed = 0;
         spawnTimer = 1.5f;
@@ -106,6 +126,7 @@ public Transform creature;
         shield.Calibrate();
         UpdateHearts();
         ShowScreen(null);   
+        ShowMessage("GO!");
     }
 
     void SpawnProjectile(float speed)
@@ -122,7 +143,9 @@ public Transform creature;
     }
     public void Blocked()
     {
+        score += 10;
         PlaySound(blockSound);
+        ShowMessage("BLOCKED! +10");
     }
     public void CreatureHit()
     {
@@ -130,6 +153,7 @@ public Transform creature;
         UpdateHearts();
 
         PlaySound(hitSound);
+        ShowMessage("OUCH!");
         creatureFlashTimer = 0.4f;
         shakeTimer = 0.3f;
 
@@ -140,6 +164,13 @@ public Transform creature;
         playing = false;
         gameOver = true;
         gameOverTime = Time.time;
+
+        if (score > highScore)
+        {
+            highScore = score;
+            PlayerPrefs.SetInt("HighScore", highScore);
+        }
+        finalScoreText.text = "Score: " + score + "\nHigh score: " + highScore + "\nPress the button to continue";
 
         ShowScreen(survived ? winScreen : loseScreen);
         PlaySound(gameOverSound);
@@ -159,6 +190,14 @@ public Transform creature;
         if (titleScreen != null) titleScreen.SetActive(screen == titleScreen);
     if (winScreen != null) winScreen.SetActive(screen == winScreen);
         if (loseScreen != null) loseScreen.SetActive(screen == loseScreen);
+        if (hud != null) hud.SetActive(screen == null); // null = playing
+        finalScoreText.gameObject.SetActive(screen == winScreen || screen == loseScreen);
+    }
+
+    void ShowMessage(string text)
+    {
+        messageText.text = text;
+        messageTimer = 0.8f;
     }
 
     void PlaySound(AudioClip clip)
